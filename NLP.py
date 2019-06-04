@@ -10,10 +10,13 @@ import nltk
 from nltk.stem import WordNetLemmatizer as Lemma
 import collections
 from collections import Counter
+from sklearn.preprocessing import LabelEncoder as LE
 
 dataset = pd.read_csv('dataset.txt', delimiter = '\t', header = None, names = ['S.No', 'Sent1', 'Sent2', 'Rating', 'Output'])
 dataset = dataset.drop(['Rating'], axis = 1)
 dataset['Output'] = dataset['Output'].apply(lambda x:'CONTRADICTION' if x == 'CONTRADICTION' else 'NOT CONTRADICTION')
+label = LE()
+dataset['Output'] = label.fit_transform(dataset['Output'])
 
 corpus1 = []
 for x in dataset['Sent1']:
@@ -88,3 +91,8 @@ for i in range(0,4500):
     s = lcs(corpus1[i],corpus2[i])
     similar = s/max(len(corpus1[i]),len(corpus2[i]))
     LCS.append(similar)
+
+dataset.insert(3, "Edit", edit)
+dataset.insert(3, "Jaccard", jaccard)
+dataset.insert(3, "Cosine", cosine_similar)
+dataset.insert(3, "LCS", LCS)
