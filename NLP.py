@@ -11,6 +11,7 @@ from nltk.stem import WordNetLemmatizer as Lemma
 import collections
 from collections import Counter
 from sklearn.preprocessing import LabelEncoder as LE
+from sklearn.utils import resample
 
 dataset = pd.read_csv('dataset.txt', delimiter = '\t', header = None, names = ['S.No', 'Sent1', 'Sent2', 'Rating', 'Output'])
 dataset = dataset.drop(['Rating'], axis = 1)
@@ -18,8 +19,13 @@ dataset['Output'] = dataset['Output'].apply(lambda x:'CONTRADICTION' if x == 'CO
 label = LE()
 dataset['Output'] = label.fit_transform(dataset['Output'])
 
+df_majority = dataset[dataset['Output'] == 1]
+df_minority = dataset[dataset['Output'] == 0]
+df_minority_upsampled = resample(df_minority, replace=True, n_samples = 3500)
+df_upsampled = pd.concat([df_majority, df_minority_upsampled]) 
+
 corpus1 = []
-for x in dataset['Sent1']:
+for x in df_upsampled['Sent1']:
     sentence1 = x.lower()
     sentence1 = sentence1.split()
     wnl = Lemma()
@@ -28,7 +34,7 @@ for x in dataset['Sent1']:
     corpus1.append(sentence1)
     
 corpus2 = []
-for y in dataset['Sent2']:
+for y in df_upsampled['Sent2']:
     sentence2 = y.lower()
     sentence2 = sentence2.split()
     wnl = Lemma()
@@ -37,12 +43,12 @@ for y in dataset['Sent2']:
     corpus2.append(sentence2)
 
 edit = []
-for i in range(0,4500):
+for i in range(0,7335):
     ed = nltk.edit_distance(corpus1[i],corpus2[i])
     edit.append(ed)
 
 jaccard = []
-for i in range(0,4500):
+for i in range(0,7335):
     jd = nltk.jaccard_distance(set(corpus1[i]),set(corpus2[i]))
     jaccard.append(jd)
     
@@ -66,7 +72,7 @@ def text_to_vector(text):
      words = WORD.findall(text)
      return Counter(words)
  
-for i in range(0,4500):
+for i in range(0,7335):
     vector1 = text_to_vector(corpus1[i])
     vector2 = text_to_vector(corpus2[i])
     cosine = get_cosine(vector1, vector2)
@@ -87,7 +93,7 @@ def lcs(s1, s2):
                     cache[i][j] = max(cache[i-1][j], cache[i][j-1])
     return cache[len(tokens1)-1][len(tokens2)-1]
 
-for i in range(0,4500):
+for i in range(0,7335):
     s = lcs(corpus1[i],corpus2[i])
     similar = s/max(len(corpus1[i]),len(corpus2[i]))
     LCS.append(similar)
