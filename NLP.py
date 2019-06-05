@@ -17,6 +17,8 @@ import nltk.sentiment.sentiment_analyzer
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from nltk.util import ngrams
+import fuzzywuzzy
+from fuzzywuzzy import fuzz
 
 dataset = pd.read_csv('dataset.txt', delimiter = '\t', header = None, names = ['S.No', 'Sent1', 'Sent2', 'Rating', 'Output'])
 dataset = dataset.drop(['Rating'], axis = 1)
@@ -108,7 +110,7 @@ for i in range(0,7335):
     s = lcs(corpus1[i],corpus2[i])
     similar = s/max(len(corpus1[i]),len(corpus2[i]))
     LCS.append(similar)
-    
+        
 def Intersection(lst1, lst2): 
     return set(lst1).intersection(lst2) 
 
@@ -175,5 +177,21 @@ for i in range(0,7335):
 
 overlap1 = []
 for i in range(0,7335):
-    a = corpus1[i]
-    b = corpus2[i]
+    a = get_tuples_nosentences(corpus1[i],1)
+    b = get_tuples_nosentences(corpus2[i],1)
+    c = Intersection(a,b)
+    ov = len(set(c))/min(len(set(a)),len(set(b)))
+    overlap1.append(ov)
+
+overlap2 = []
+for i in range(0,7335):
+    a = get_tuples_nosentences(corpus1[i],2)
+    b = get_tuples_nosentences(corpus2[i],2)
+    c = Intersection(a,b)
+    ov = len(set(c))/min(len(set(a)),len(set(b)))
+    overlap2.append(ov)
+
+fuzzy = []
+for i in range(0,7335):
+    fov = fuzz.token_set_ratio(df_upsampled['Sent1'][i],df_upsampled['Sent2'][i])
+    fuzzy.append(fov)
