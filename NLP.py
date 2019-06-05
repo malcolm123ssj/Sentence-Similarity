@@ -16,6 +16,7 @@ import contractions
 import nltk.sentiment.sentiment_analyzer
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+from nltk.util import ngrams
 
 dataset = pd.read_csv('dataset.txt', delimiter = '\t', header = None, names = ['S.No', 'Sent1', 'Sent2', 'Rating', 'Output'])
 dataset = dataset.drop(['Rating'], axis = 1)
@@ -33,6 +34,7 @@ A = ['no','not','never','nothing','against','but','very','little','most','off','
 corpus1 = []
 for x in df_upsampled['Sent1']:
     sentence1 = x.lower()
+    sentence1 = re.sub('[^a-zA-Z0-60000]',' ',sentence1)
     sentence1 = contractions.fix(sentence1)
     sentence1 = sentence1.split()
     wnl = Lemma()
@@ -43,6 +45,7 @@ for x in df_upsampled['Sent1']:
 corpus2 = []
 for y in df_upsampled['Sent2']:
     sentence2 = y.lower()
+    sentence1 = re.sub('[^a-zA-Z0-60000]',' ',sentence2)
     sentence2 = contractions.fix(sentence2)
     sentence2 = sentence2.split()
     wnl = Lemma()
@@ -50,17 +53,17 @@ for y in df_upsampled['Sent2']:
     sentence2 = ' '.join(sentence2)
     corpus2.append(sentence2)
 
-edit = []
+edit1 = []
 for i in range(0,7335):
     ed = nltk.edit_distance(corpus1[i],corpus2[i])
-    edit.append(ed)
+    edit1.append(ed)
 
-jaccard = []
+jaccard1 = []
 for i in range(0,7335):
     jd = nltk.jaccard_distance(set(corpus1[i]),set(corpus2[i]))
-    jaccard.append(jd)
+    jaccard1.append(jd)
     
-cosine_similar = []
+cosine_similar1 = []
 WORD = re.compile(r'\w+')
 
 def get_cosine(vec1, vec2):
@@ -84,7 +87,7 @@ for i in range(0,7335):
     vector1 = text_to_vector(corpus1[i])
     vector2 = text_to_vector(corpus2[i])
     cosine = get_cosine(vector1, vector2)
-    cosine_similar.append(cosine)
+    cosine_similar1.append(cosine)
 
 LCS = []
 def lcs(s1, s2):
@@ -105,8 +108,72 @@ for i in range(0,7335):
     s = lcs(corpus1[i],corpus2[i])
     similar = s/max(len(corpus1[i]),len(corpus2[i]))
     LCS.append(similar)
+    
+def Intersection(lst1, lst2): 
+    return set(lst1).intersection(lst2) 
 
-df_upsampled.insert(3, "Edit", edit)
-df_upsampled.insert(3, "Jaccard", jaccard)
-df_upsampled.insert(3, "Cosine", cosine_similar)
-df_upsampled.insert(3, "LCS", LCS)
+def get_tuples_nosentences(txt, NGRAM):
+    if not txt: 
+        return None
+    ng = ngrams(txt.split(), NGRAM)
+    return list(ng)
+
+def jaccard_distance_ngrams(a,b):
+    a = set(a)
+    b = set(b)
+    return 1.0 * len(a&b)/len(a|b)
+
+def cosine_similarity_ngrams(a,b):
+    vec1 = Counter(a)
+    vec2 = Counter(b)
+    
+    intersection = set(vec1.keys()) & set(vec2.keys())
+    numerator = sum([vec1[x] * vec2[x] for x in intersection])
+
+    sum1 = sum([vec1[x]**2 for x in vec1.keys()])
+    sum2 = sum([vec2[x]**2 for x in vec2.keys()])
+    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+
+    if not denominator:
+        return 0.0
+    return float(numerator) / denominator
+
+cosine_similar2 = []
+for i in range(0,7335):
+    a = get_tuples_nosentences(corpus1[i],2)
+    b = get_tuples_nosentences(corpus2[i],2)
+    cs = cosine_similarity_ngrams(a,b)
+    cosine_similar2.append(cs)
+    
+cosine_similar3 = []
+for i in range(0,7335):
+    a = get_tuples_nosentences(corpus1[i],3)
+    b = get_tuples_nosentences(corpus2[i],3)
+    cs = cosine_similarity_ngrams(a,b)
+    cosine_similar3.append(cs)
+    
+cosine_similar4 = []
+for i in range(0,7335):
+    a = get_tuples_nosentences(corpus1[i],4)
+    b = get_tuples_nosentences(corpus2[i],4)
+    cs = cosine_similarity_ngrams(a,b)
+    cosine_similar4.append(cs)
+    
+cosine_similar5 = []
+for i in range(0,7335):
+    a = get_tuples_nosentences(corpus1[i],5)
+    b = get_tuples_nosentences(corpus2[i],5)
+    cs = cosine_similarity_ngrams(a,b)
+    cosine_similar5.append(cs)
+  
+jaccard2 = []
+for i in range(0,7335):
+    a = get_tuples_nosentences(corpus1[i],2)
+    b = get_tuples_nosentences(corpus2[i],2)
+    jd = jaccard_distance_ngrams(a,b)
+    jaccard2.append(jd)
+
+overlap1 = []
+for i in range(0,7335):
+    a = corpus1[i]
+    b = corpus2[i]
