@@ -12,6 +12,10 @@ import collections
 from collections import Counter
 from sklearn.preprocessing import LabelEncoder as LE
 from sklearn.utils import resample
+import contractions
+import nltk.sentiment.sentiment_analyzer
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 dataset = pd.read_csv('dataset.txt', delimiter = '\t', header = None, names = ['S.No', 'Sent1', 'Sent2', 'Rating', 'Output'])
 dataset = dataset.drop(['Rating'], axis = 1)
@@ -24,21 +28,25 @@ df_minority = dataset[dataset['Output'] == 0]
 df_minority_upsampled = resample(df_minority, replace=True, n_samples = 3500)
 df_upsampled = pd.concat([df_majority, df_minority_upsampled]) 
 
+A = ['no','not','never','nothing','against','but','very','little','most','off','until','above','below','nor','none','all','same','different']
+
 corpus1 = []
 for x in df_upsampled['Sent1']:
     sentence1 = x.lower()
+    sentence1 = contractions.fix(sentence1)
     sentence1 = sentence1.split()
     wnl = Lemma()
-    sentence1 = [wnl.lemmatize(word) for word in sentence1 if word not in stopwords.words('english')]
+    sentence1 = [wnl.lemmatize(word) for word in sentence1 if word not in stopwords.words('english') or word in A]
     sentence1 = ' '.join(sentence1)
     corpus1.append(sentence1)
     
 corpus2 = []
 for y in df_upsampled['Sent2']:
     sentence2 = y.lower()
+    sentence2 = contractions.fix(sentence2)
     sentence2 = sentence2.split()
     wnl = Lemma()
-    sentence2 = [wnl.lemmatize(word) for word in sentence2 if word not in stopwords.words('english')]
+    sentence2 = [wnl.lemmatize(word) for word in sentence2 if word not in stopwords.words('english') or word in A]
     sentence2 = ' '.join(sentence2)
     corpus2.append(sentence2)
 
@@ -98,7 +106,7 @@ for i in range(0,7335):
     similar = s/max(len(corpus1[i]),len(corpus2[i]))
     LCS.append(similar)
 
-dataset.insert(3, "Edit", edit)
-dataset.insert(3, "Jaccard", jaccard)
-dataset.insert(3, "Cosine", cosine_similar)
-dataset.insert(3, "LCS", LCS)
+df_upsampled.insert(3, "Edit", edit)
+df_upsampled.insert(3, "Jaccard", jaccard)
+df_upsampled.insert(3, "Cosine", cosine_similar)
+df_upsampled.insert(3, "LCS", LCS)
