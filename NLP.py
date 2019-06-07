@@ -7,11 +7,14 @@ from nltk.stem import WordNetLemmatizer as Lemma
 import collections
 from collections import Counter
 from sklearn.preprocessing import LabelEncoder as LE
+from sklearn.preprocessing import MinMaxScaler as MMS
 from sklearn.utils import resample
 import contractions
-import nltk.sentiment.sentiment_analyzer
 from nltk.util import ngrams
 from fuzzywuzzy import fuzz
+from sklearn.linear_model import LogisticRegression as LR
+from sklearn.model_selection import train_test_split
+import sklearn.metrics as SM
 
 dataset = pd.read_csv('dataset.txt', delimiter = '\t', header = None, names = ['S.No', 'Sent1', 'Sent2', 'Rating', 'Output'])
 dataset = dataset.drop(['Rating'], axis = 1)
@@ -160,27 +163,6 @@ for i in range(0,7335):
     b = get_tuples_nosentences(corpus2[i],2)
     cs = cosine_similarity_ngrams(a,b)
     cosine_similar2.append(cs)
-    
-cosine_similar3 = []
-for i in range(0,7335):
-    a = get_tuples_nosentences(corpus1[i],3)
-    b = get_tuples_nosentences(corpus2[i],3)
-    cs = cosine_similarity_ngrams(a,b)
-    cosine_similar3.append(cs)
-    
-cosine_similar4 = []
-for i in range(0,7335):
-    a = get_tuples_nosentences(corpus1[i],4)
-    b = get_tuples_nosentences(corpus2[i],4)
-    cs = cosine_similarity_ngrams(a,b)
-    cosine_similar4.append(cs)
-    
-cosine_similar5 = []
-for i in range(0,7335):
-    a = get_tuples_nosentences(corpus1[i],5)
-    b = get_tuples_nosentences(corpus2[i],5)
-    cs = cosine_similarity_ngrams(a,b)
-    cosine_similar5.append(cs)
   
 jaccard2 = []
 for i in range(0,7335):
@@ -207,7 +189,7 @@ for i in range(0,7335):
 
 fuzzy = []
 for i in range(0,7335):
-    fov = fuzz.token_set_ratio(df_upsampled['Sent1'][i],df_upsampled['Sent2'][i])
+    fov = fuzz.token_set_ratio(df_upsampled['Sent1'].iloc[i],df_upsampled['Sent2'].iloc[i])
     fuzzy.append(fov)
     
 euclid = []
@@ -217,5 +199,51 @@ for i in range(0,7335):
     c = euclidDistance(vector1,vector2)
     euclid.append(c)
     
-
+parts_of_speech = []
+for i in range(0,7335):
+    d1 = speechCount(df_upsampled['Sent1'].iloc[i])
+    d2 = speechCount(df_upsampled['Sent2'].iloc[i])
+    d3 = [abs(d1[key] - d2.get(key, 0)) for key in d1.keys()]
+    parts_of_speech.append(d3)  
     
+noun, adjective, verb = [], [], []    
+for i in range(0,7335):
+    n = parts_of_speech[i][0]
+    noun.append(n)
+    ad = parts_of_speech[i][1]
+    adjective.append(ad)
+    ve = parts_of_speech[i][2]
+    verb.append(ve)
+    
+df_upsampled.insert(3, "Edit", edit1, True) 
+df_upsampled.insert(3, "Jaccard1", jaccard1, True) 
+df_upsampled.insert(3, "Cosine1", cosine_similar1, True) 
+df_upsampled.insert(3, "LCS", LCS, True) 
+df_upsampled.insert(3, "Jaccard2", jaccard2, True) 
+df_upsampled.insert(3, "Cosine2", cosine_similar2, True) 
+df_upsampled.insert(3, "Overlap1", overlap1, True) 
+df_upsampled.insert(3, "Overlap2", overlap2, True) 
+df_upsampled.insert(3, "Fuzzy", fuzzy, True) 
+df_upsampled.insert(3, "Euclid", euclid, True) 
+df_upsampled.insert(3, "Noun", noun, True)
+df_upsampled.insert(3, "Adjective", adjective, True)
+df_upsampled.insert(3, "Verb", verb, True)
+
+X = df_upsampled.iloc[:,3:16]
+y = df_upsampled.iloc[:, [16]]
+
+scaler = MMS()
+X = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 42)
+
+log_reg = LR()
+log_reg.fit(X_train, y_train)
+y_pred = log_reg.predict(X_test)
+
+print(SM.accuracy_score(y_test,y_pred))
+print(SM.recall_score(y_test,y_pred))
+print(SM.precision_score(y_test,y_pred))
+
+
+
