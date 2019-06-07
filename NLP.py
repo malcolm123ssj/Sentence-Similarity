@@ -1,11 +1,7 @@
-import numpy as np
 import pandas as pd
-from gensim.models import Word2Vec
 from nltk.corpus import stopwords
 import re
 import math
-from numpy import dot
-from numpy.linalg import norm
 import nltk
 from nltk.stem import WordNetLemmatizer as Lemma
 import collections
@@ -14,10 +10,7 @@ from sklearn.preprocessing import LabelEncoder as LE
 from sklearn.utils import resample
 import contractions
 import nltk.sentiment.sentiment_analyzer
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
 from nltk.util import ngrams
-import fuzzywuzzy
 from fuzzywuzzy import fuzz
 
 dataset = pd.read_csv('dataset.txt', delimiter = '\t', header = None, names = ['S.No', 'Sent1', 'Sent2', 'Rating', 'Output'])
@@ -65,6 +58,27 @@ for i in range(0,7335):
     jd = nltk.jaccard_distance(set(corpus1[i]),set(corpus2[i]))
     jaccard1.append(jd)
     
+def euclidDistance(v1 ,v2):
+    return math.sqrt(sum((v1[k] - v2[k])**2 for k in set(v1.keys()).intersection(set(v2.keys()))))
+
+def speechCount(sent):
+    tokens = nltk.word_tokenize(sent)
+    text = nltk.Text(tokens)
+    tags = nltk.pos_tag(text)
+    
+    res ={'NN':0 ,'JJ' :0 , 'VB' :0}
+    
+    for word ,tag in tags:
+        if tag in ['NN','NNS','NNP','NNPS']:
+            res['NN']+=1;
+        elif tag in ['JJ','JJR','JJS']:
+            res['JJ']+=1
+        elif tag in ['VB','VBD','VBG','VBN','VBP','VBZ']:
+            res['VB']+=1
+    
+    total = sum(res.values())
+    return dict((word, float(count)/total) for word,count in res.items())
+
 cosine_similar1 = []
 WORD = re.compile(r'\w+')
 
@@ -195,3 +209,13 @@ fuzzy = []
 for i in range(0,7335):
     fov = fuzz.token_set_ratio(df_upsampled['Sent1'][i],df_upsampled['Sent2'][i])
     fuzzy.append(fov)
+    
+euclid = []
+for i in range(0,7335):
+    vector1 = text_to_vector(corpus1[i])
+    vector2 = text_to_vector(corpus2[i])
+    c = euclidDistance(vector1,vector2)
+    euclid.append(c)
+    
+
+    
